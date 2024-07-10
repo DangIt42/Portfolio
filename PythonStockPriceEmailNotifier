@@ -1,0 +1,76 @@
+#import modules and install packages
+import datetime
+import time
+import yfinance as yf
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+# Email configurations 
+EMAIL_FROM = 'EMAIL SENDER'
+EMAIL_TO = 'EMAIL RECEIVER'
+EMAIL_PASSWORD = 'EMAILPASSWORD'
+
+# List of stock symbols and their threshold prices
+stocks_to_monitor = {
+    'Stock Ticker Symbol': 123.45,
+    'Stock Ticker Symbol': 123.45,
+    'Stock Ticker Symbol': 123.45,
+    # Add more stocks here as needed
+}
+
+# Function to get current stock price from Yahoo Finance
+def get_stock_price(stock_symbol):
+    try:
+        stock = yf.Ticker(stock_symbol)
+        stock_data = stock.history(period='1d')
+        return stock_data['Close'].iloc[-1]  # Last closing price
+    except Exception as e:
+        print(f"Error fetching stock price for {stock_symbol}: {e}")
+        return None
+
+# Function for email notification
+def send_email(subject, message):
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(EMAIL_FROM, EMAIL_PASSWORD)
+
+        msg = MIMEMultipart()
+        msg['From'] = EMAIL_FROM
+        msg['To'] = EMAIL_TO
+        msg['Subject'] = subject
+        msg.attach(MIMEText(message, 'plain'))
+
+        server.sendmail(EMAIL_FROM, EMAIL_TO, msg.as_string())
+        print("Email sent successfully!")
+        server.quit()
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+# Function for checking if market is open and stock price checking
+def is_market_open():
+    now = datetime.datetime.now(datetime.timezone.utc)
+    now_et = now.astimezone(datetime.timezone(datetime.timedelta(hours=-5)))  # Convert to Eastern Time (ET)
+
+    # Check if current time is between 9:30 AM and 4:00 PM ET and not a weekend
+    if now_et.weekday() < 5:  # Monday to Friday (0 to 4)
+        market_open_time = now_et.replace(hour=9, minute=30, second=0, microsecond=0)
+        market_close_time = now_et.replace(hour=16, minute=0, second=0, microsecond=0)
+        return market_open_time <= now_et <= market_close_time
+    else:
+        return False
+
+if __name__ == '__main__':
+    while True:
+        if is_market_open():
+            for stock_symbol, threshold_price in stocks_to_monitor.items():
+                stock_price = get_stock_price(stock_symbol)
+                if stock_price is not None:
+                    print(f"Current {stock_symbol} stock price: ${stock_price}")
+                    if stock_price < threshold_price:
+                        message = f"{stock_symbol} stock price is below ${threshold_price}!"
+                        send_email(f"{stock_symbol} Alert", message)
+        else:
+            print("Market is closed. Waiting for opening time...")
+        time.sleep(60)  # Check every minute (adjust as needed)
