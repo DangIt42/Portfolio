@@ -1,0 +1,53 @@
+# Import modules
+
+# For implementing the HTTP Web servers
+import http.server
+
+# Provides access to the BSD socket interface
+import socket
+
+# Framework for network servers
+import socketserver
+
+# To display a Web-based documents to users
+import webbrowser
+
+# To generate qrcode
+import pyqrcode
+
+# To access operating system control
+import os
+
+
+# Assigning the appropriate port value
+PORT = 8010
+# This finds the name of the computer user
+os.environ['USERPROFILE']
+# Changing the directory to access the files desktop with the help of the os module
+pyAppShare = os.path.join(os.path.join(os.environ['USERPROFILE']),
+# Specifies which file to open, in this case, a folder called PythonAppShare
+					   'OneDrive\Desktop\PythonAppShare')
+os.chdir(pyAppShare)
+# Creating a http request
+Handler = http.server.SimpleHTTPRequestHandler
+# Returns, host name of the system
+hostname = socket.gethostname()
+# Finds the IP address of the PC
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("8.8.8.8", 80))
+IP = "http://" + s.getsockname()[0] + ":" + str(PORT)
+link = IP
+
+# Converts the IP address into a Qrcode
+url = pyqrcode.create(link)
+# saves the Qrcode inform of svg
+url.svg("myqr.svg", scale=8)
+# opens the Qrcode image in the web browser
+webbrowser.open('myqr.svg')
+
+# Creating the HTTP request, serving the folder in the PORT 8010, and the pyqrcode is generated
+with socketserver.TCPServer(("", PORT), Handler) as httpd:
+	print("serving at port", PORT)
+	print("Type this in your Browser", IP)
+	print("or Use the QRCode")
+	httpd.serve_forever()
